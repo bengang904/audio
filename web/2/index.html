@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>音频裁切合并</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        *{margin: 0; padding: 0;}
+        canvas{
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 150px;
+            position: absolute;
+        }
+        #tip{
+            position: absolute;
+        }
+        body,html{
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        section{
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        section>div:first-child{
+            border-top: none;
+        }
+        section>div{
+            height: 150px;
+            position: relative;
+            width: 100%;
+            border-bottom: 1px solid #eee;
+            box-sizing: 0;
+            overflow: hidden;
+            box-shadow: 0 0px 10px #eee;
+        }
+
+        section input[type='file']{
+            font-size: 400px;
+            opacity: .01;
+        }
+        .footer{position: fixed; right: 0; left: 0; bottom: 0; padding:0 0 30px 0; text-align: center;}
+        .footer button{
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            border: none;
+            width: 150px;
+            height: 50px;
+            font-size: 14px;
+            background-color: #ff8c00; 
+            position: relative;
+            display: block;
+            overflow: hidden;
+            margin: 0 auto;
+            box-shadow: 0 0 30px #999;
+        }
+        .footer button::after{
+            content: '';
+            display: block;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(.01,.01);
+            border-radius: 50%;
+            width: 150px;
+            height: 150px;
+            transition: all .5s;
+            opacity: 1;
+            background-color: rgba(255,255,255,.3);
+        }
+        .footer button:hover:after{
+            transform:translate(-50%, -50%) scale(1.5,1.5);
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    
+    <section>
+        <div>
+            <input accept="audio/*" id="choose0" value="choose" type="file">
+        </div>
+        <div>
+            <input accept="audio/*" id="choose1" value="choose" type="file">
+        </div>
+        <div>
+            <input accept="audio/*" id="choose2" value="choose" type="file">
+        </div>
+        <div>
+            <input accept="audio/*" id="choose3" value="choose" type="file">
+        </div>
+    </section>
+            
+    <div class="footer">
+        <button id="download">下载</button>
+    </div>
+    
+    <span id="tip"></span>
+    
+    <script>
+        (function(){
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            var audioContext = new AudioContext();
+            var buffers = [];
+            var isplay = false;
+            var req;
+            var audioBufferSourceNode;
+            var downloadBf, totallist, selectbuffer;
+            
+            function concatenateAudioBuffers(buffer1, buffer2) {
+                if (!buffer1 || !buffer2) {
+                    return null;
+                }
+
+                if (buffer1.numberOfChannels != buffer2.numberOfChannels) {
+                    return null;
+                }
+
+                if (buffer1.sampleRate != buffer2.sampleRate) {
+                    return null;
+                }
+
+                var tmp = audioContext.createBuffer(buffer1.numberOfChannels, buffer1.length + buffer2.length, buffer1.sampleRate);
+
+                for (var i=0; i<tmp.numberOfChannels; i++) {
+                    var data = tmp.getChannelData(i);
+                    data.set(buffer1.getChannelData(i));
+                    data.set(buffer2.getChannelData(i),buffer1.length);
+                }
+                return tmp;
+            };
+
+            function start(buffer) {
+                downloadBf = null;
+                for(let i =0; i<buffers.length; i++){
+                    if(buffers[i] && buffers[i]['select']){
+                        if(downloadBf){
+                            downloadBf = concatenateAudioBuffers(downloadBf, buffers[i]['select'])
+                        } else {
+                            downloadBf =  buffers[i]['select'];
+                        }
+                    }
+                }
+                if (audioBufferSourceNode) {
+                    audioBufferSourceNode.stop();
+                }
+                audioContext = new AudioContext();
+                const analyser = audioContext.createAnalyser();
+                audioBufferSourceNode = audioContext.createBufferSource();
+                audioBufferSourceNode.connect(analyser);
+                analyser.connect(audioContext.destination);
+                audioBufferSourceNode.buffer = buffer;
+                audioBufferSourceNode.start(0);
+
+                audioBufferSourceNode.onended = function() {
+                    isplay = false;
+                    cancelAnimationFrame(req);
+                };
+            }
+            function showBuffer(buffer, index) {
+                var cs = '';
+                var ctx = '';
+                var item = document.querySelectorAll('section>div')[index];
+                if(item.querySelector('canvas')){
+                    cs = buffers[index]['cs']
+                    ctx = buffers[index]['ctx'];
+                } else {
+                    cs = document.createElement('canvas');
+                    cs.width = window.innerWidth;
+                    ctx = cs.getContext('2d');
+                }
+                ctx.clearRect(0,0, cs.width, cs.height);
+                const lth = buffer.getChannelData(1).length;
+                const arr = buffer.getChannelData(1);
+                let w = Math.floor(lth/cs.width/2);
+                ctx.fillStyle ='#efefef'
+                const list = []
+                for(let i =0; i<cs.width; i++) {
+                    list.push(arr[i*w]*cs.height);
+                    ctx.fillRect(i,(cs.height-arr[i*w]*cs.height)/2,1,arr[i*w]*cs.height);
+                };
+                ctx.save();
+                cs.dataset['index'] = index;
+                cs.addEventListener('mousedown', mousedown, false);
+                cs.addEventListener('touchstart', mousedown, false);
+                cs.addEventListener('mousemove', mousemove, false);
+                cs.addEventListener('touchmove', mousemove, false);
+                cs.addEventListener('mouseup', mouseup, false);
+                cs.addEventListener('touchend', mouseup, false);
+                document.querySelectorAll("section>div")[index].appendChild(cs);
+                return {
+                    cs: cs,
+                    ctx: ctx,
+                    step: w,
+                    list: list
+                }
+            }
+
+            var newbuffer;
+            var down = false;
+            function mousedown(e){
+                if(e.touches && e.touches.length){
+                    e = e.touches[0];
+                }
+                var index = e.target.dataset['index'];
+                if(buffers[index]){
+                    if(buffers[index]['end']){
+                        buffers[index]['end'] = e.clientX;
+                        showBuffer(buffers[index]['buffer'], index);
+                    }
+                    buffers[index]['start'] = e.clientX
+                    down = true;
+                    if (audioBufferSourceNode) {
+                        audioBufferSourceNode.stop();
+                    }
+                    cancelAnimationFrame(req);
+                }
+            }
+
+            function mousemove(e){
+                if(e.touches && e.touches.length){
+                    e = e.touches[0];
+                }
+                var index = e.target.dataset['index'];
+                if(!down){
+                    return;
+                }
+                if(buffers[index] && buffers[index]['start']){
+                    buffers[index]['end'] = e.clientX
+                    updateSelectCanvas(buffers[index]['ctx'], buffers[index]['start'], e.clientX, index);
+                }
+            }
+
+            function mouseup(e){
+                if(e.touches && e.touches.length){
+                    e = e.touches[0];
+                }
+                let index = e.target.dataset['index'];
+                if(buffers[index]){
+                    if(Math.abs(buffers[index]['end'] - buffers[index]['start'])>3){
+                        buffers[index]['select'] = getBufferBetween(buffers[index]['start'], buffers[index]['end'], index);
+                        start(buffers[index]['select']);
+                        updateWave(buffers[index]['list'], buffers[index]['buffer']['duration'], index);
+                    }
+                    down = false;
+                }
+            }
+
+            function updateWave(list, dur, index) {
+                let ctx = buffers[index]['ctx'];
+                let cs = buffers[index]['cs'];
+                let start = buffers[index]['start'];
+                let end = buffers[index]['end'];
+                let fc = buffers[index]['fc'];
+                let durstep = 0;
+                function update() {
+                    for(let i =start; i<durstep+start; i++) {
+                        ctx.fillStyle = "#c00";
+                        ctx.fillRect(i,(cs.height-list[i])/2, 1, list[i]);
+                    }
+                    durstep = Math.floor(audioContext.currentTime/dur * cs.width);
+                    if(durstep+start >= end){
+                        cancelAnimationFrame(req)
+                    } else {
+                        req = requestAnimationFrame(update)
+                    }
+                }
+                update()
+            }
+
+            document.getElementById('download').addEventListener('click', function(){
+                if(downloadBf){
+                    downloadBuffer(downloadBf);
+                }
+            })
+
+            function getBufferBetween(start, end, index){
+                let fc = true;
+                if(start>end){
+                    let _s = end;
+                    end = start;
+                    start = _s;
+                    fc = false;
+                }
+                buffers[index]['fc'] = fc;
+                let cs = buffers[index]['cs'];
+                let gbuffer = buffers[index]['buffer'];
+                let _dur = gbuffer.duration * ((end-start)/cs.width);
+                let _start = Math.floor(gbuffer.getChannelData(0).length*(start/cs.width));
+                let _end = Math.floor(gbuffer.getChannelData(0).length*(end/cs.width)) ;
+                let _bf = audioContext.createBuffer(2, audioContext.sampleRate * _dur, audioContext.sampleRate);
+                if(fc){
+                    for (let channel = 0; channel < 2; channel++) {
+                        for (var i = 0; i < _bf.length; i++) {
+                            _bf.getChannelData(channel)[i] = gbuffer.getChannelData(channel)[_start+i];
+                        }
+                    }
+                } else {
+                    for (let channel = 0; channel < 2; channel++) {
+                        for (var i = 0; i < _bf.length; i++) {
+                            _bf.getChannelData(channel)[ _bf.length - i] = gbuffer.getChannelData(channel)[_start+i];
+                        }
+                    }
+                }
+                return _bf;
+            }
+
+
+            function updateSelectCanvas(ctx, start, end, index) {
+                let _list = buffers[index].list;
+                let cs = buffers[index].cs;
+                if(start>end){
+                    let _s = end;
+                    end = start;
+                    start = _s;
+                }
+                let _start = Math.floor(_list.length*(start/cs.width));
+                let _end = Math.floor(_list.length*(end/cs.width));
+                for(let i =_start; i<_end; i++) {
+                    ctx.fillStyle = '#cdcdcd';
+                    ctx.fillRect(i,(cs.height-_list[i])/2,1,_list[i]);
+                };
+            }
+
+            const decodecFile = function(fileContent, id) {
+                audioContext.decodeAudioData(fileContent, function(buffer) {
+                    let index = id.replace(/choose/g,'');
+                    buffers[index] = Object.assign({buffer: buffer},showBuffer(buffer, index));
+                });
+            }
+            
+            window.addEventListener('change', function(e){
+                if(e.target.id.indexOf('choose') != -1){
+                    if(e.target.files.length){
+                        loadLocalSound(e.target.files[0], function(file){
+                            decodecFile(file, e.target.id);
+                        })
+                    }
+                }
+            })
+
+            window.loadDogSound = function(url, callback) {
+                var request = new window.XMLHttpRequest();
+                request.responseType = 'arraybuffer';
+                request.onprogress = function(rst) {
+                    document.getElementById('bar').style.width = (rst.loaded / rst.total)*100+'%'
+                }
+                request.onloadend = callback
+                request.open('GET', url, true);
+                request.send();
+            };
+
+            
+            window.loadLocalSound = function(file, callback){
+                var fileReader = new FileReader();
+                fileReader.onload = function(e) {
+                    fileContent = e.target.result;
+                    callback(fileContent);
+                }
+                fileReader.readAsArrayBuffer(file);
+            }
+
+            window.downloadBuffer = function(buffer){
+                const blobURL = URL.createObjectURL(bufferToWave(buffer, buffer.getChannelData(0).length))
+                var a = document.createElement("a");
+                document.body.appendChild(a);
+                a.style = "display: none";
+                a.href = blobURL;
+                a.download = "download.wav";
+                a.click();
+            }
+
+            function encodeMP3(abuffer, bytes, inputSampleRate){
+                var channels = 1; 
+                var sampleRate = abuffer.sampleRate; 
+                var kbps = 128; 
+                var mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, kbps);
+
+                var samples = new Int16Array(bytes.buffer); 
+                var sampleBlockSize = 1152; 
+
+                var mp3Data = [];
+                for (var i = 0; i < samples.length; i += sampleBlockSize) {
+                    var sampleChunk = samples.subarray(i, i + sampleBlockSize);
+                    mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+                    if (mp3buf.length > 0) {
+                        mp3Data.push(mp3buf); 
+                    }
+                }
+                var mp3buf = mp3encoder.flush(); 
+                if (mp3buf.length > 0) {
+                    mp3Data.push(new Int8Array(mp3buf)); 
+                }
+                return mp3Data;
+            } 
+
+
+            function bufferToWave(abuffer, len) {
+                var numOfChan = abuffer.numberOfChannels,
+                    length = len * numOfChan * 2 + 44,
+                    buffer = new ArrayBuffer(length),
+                    view = new DataView(buffer),
+                    channels = [], i, sample,
+                    offset = 0,
+                    pos = 0;
+                
+                setUint32(0x46464952); 
+                setUint32(length - 8); 
+                setUint32(0x45564157); 
+                
+                setUint32(0x20746d66); 
+                setUint32(16); 
+                setUint16(1); 
+                setUint16(numOfChan);
+                setUint32(abuffer.sampleRate);
+                setUint16(numOfChan * 2); 
+                setUint32(abuffer.sampleRate * 2 * numOfChan); 
+                setUint16(16); 
+                
+                setUint32(0x61746164); 
+                setUint32(length - pos - 4); 
+                
+                for(i = 0; i < abuffer.numberOfChannels; i++)
+                    channels.push(abuffer.getChannelData(i));
+                
+                while(pos < length) {
+                    for(i = 0; i < numOfChan; i++) { 
+                        sample = Math.max(-1, Math.min(1, channels[i][offset])); 
+                        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; 
+                        view.setInt16(pos, sample, true); 
+                        pos += 2;
+                    }
+                    offset++ 
+                }
+                
+                return new Blob([buffer], {type: "audio/wav"});
+                
+                function setUint16(data) {
+                    view.setUint16(pos, data, true);
+                    pos += 2;
+                }
+                
+                function setUint32(data) {
+                    view.setUint32(pos, data, true);
+                    pos += 4;
+                }
+            }
+        })()
+    </script>
+</body>
+</html>
