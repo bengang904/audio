@@ -7,9 +7,10 @@
     },
      {
         "title": "音频裁剪合并",
-        "type": "识别",
+        "type": "裁剪合并",
         "link": "web/2",
         "thumbnail": "web/2/logo.jpg"
     }
 ]
+
 
