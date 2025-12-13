@@ -4,5 +4,12 @@
         "type": "识别",
         "link": "web/1",
         "thumbnail": "web/1/logo.png"
+    },
+     {
+        "title": "音频裁剪合并",
+        "type": "识别",
+        "link": "web/2",
+        "thumbnail": "web/2/logo.jpg"
     }
 ]
+
