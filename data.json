@@ -7,10 +7,17 @@
     },
      {
         "title": "音频裁剪合并",
-        "type": "裁剪合并",
+        "type": "编辑",
         "link": "web/2",
         "thumbnail": "web/2/logo.jpg"
+    },
+    {
+        "title": "MP3 ID3 编辑器",
+        "type": "编辑",
+        "link": "web/3",
+        "thumbnail": "web/3/logo.jpg"
     }
 ]
+
 
 
