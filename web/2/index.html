@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>MP3 标签编辑器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-id3-writer@4.4.0/dist/browser-id3-writer.min.js"></script>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', 'Microsoft YaHei', monospace;
+            background: #0f111a;
+            color: #d1d5db;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: #1a1c25;
+            padding: 30px;
+            border-radius: 0;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid #30363d;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 25px;
+            text-align: left;
+            color: #ffffff;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-left: 4px solid #4a90e2;
+            padding-left: 15px;
+            font-size: 1.25rem;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #9ca3af;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-top: 4px;
+            box-sizing: border-box;
+            border: 1px solid #30363d;
+            border-radius: 0;
+            transition: all 0.2s;
+            font-size: 0.95em;
+            color: #e5e7eb;
+            background-color: #0f111a;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 140px;
+            line-height: 1.5;
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: #0f111a;
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border: 2px solid #0f111a;
+        }
+
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #4a90e2;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #4a90e2;
+            background-color: #161b22;
+            outline: none;
+        }
+
+        #fileInput, #coverInput, #lrcInput {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        .file-input-wrapper {
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .custom-file-upload {
+            background-color: transparent;
+            color: #4a90e2;
+            padding: 8px 16px;
+            border: 1px solid #4a90e2;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .custom-file-upload:hover {
+            background-color: rgba(74, 144, 226, 0.1);
+        }
+
+        .lrc-upload {
+            color: #34c759;
+            border-color: #34c759;
+        }
+
+        .lrc-upload:hover {
+            background-color: rgba(52, 199, 89, 0.1);
+        }
+
+        .filename-display {
+            color: #6b7280;
+            font-size: 0.75em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        #coverPreview {
+            display: block;
+            width: 100%;
+            max-width: 150px;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            margin: 20px 0 0 0;
+            border-radius: 0;
+            border: 1px solid #30363d;
+            background: #0f111a;
+        }
+
+        #saveBtn {
+            margin-top: 40px;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #saveBtn:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+            transform: translateY(-1px);
+        }
+
+        #saveBtn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+                border: none;
+                box-shadow: none;
+            }
+            .filename-display {
+                max-width: 140px;
+            }
+            h2 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>MP3 标签编辑器</h2>
+        
+        <label>源文件 (MP3)</label>
+        <div class="file-input-wrapper">
+            <label for="fileInput" class="custom-file-upload">选择文件</label>
+            <span id="fileInput-filename" class="filename-display">未选择</span>
+        </div>
+        <input type="file" id="fileInput" accept=".mp3">
+
+        <label for="title">标题</label>
+        <input type="text" id="title" placeholder="输入歌曲标题">
+
+        <label for="artist">艺术家</label>
+        <input type="text" id="artist" placeholder="输入歌手名称">
+
+        <label for="album">专辑</label>
+        <input type="text" id="album" placeholder="输入专辑名称">
+
+        <label for="year">年份</label>
+        <input type="text" id="year" placeholder="2026">
+
+        <label>歌词同步 (.lrc)</label>
+        <div class="file-input-wrapper">
+            <label for="lrcInput" class="custom-file-upload lrc-upload">加载 LRC</label>
+            <span id="lrcInput-filename" class="filename-display">可选</span>
+        </div>
+        <input type="file" id="lrcInput" accept=".lrc">
+        <textarea id="lyrics" placeholder="[00:00.00] 歌词内容..."></textarea>
+
+        <label>封面 (JPG/PNG)</label>
+        <div class="file-input-wrapper">
+            <label for="coverInput" class="custom-file-upload">更换封面</label>
+            <span id="coverInput-filename" class="filename-display">未上传</span>
+        </div>
+        <input type="file" id="coverInput" accept="image/jpeg,image/png">
+        <img id="coverPreview" style="display:none;" alt="预览">
+
+        <button id="saveBtn">保存并生成 MP3</button>
+    </div>
+
+    <script>
+        let mp3ArrayBuffer;
+        let coverArrayBuffer = null;
+        let coverMime = null;
+
+        const fileInput = document.getElementById('fileInput');
+        const coverInput = document.getElementById('coverInput');
+        const lrcInput = document.getElementById('lrcInput');
+        const coverPreview = document.getElementById('coverPreview');
+        const fileInputFilename = document.getElementById('fileInput-filename');
+        const coverInputFilename = document.getElementById('coverInput-filename');
+        const lrcInputFilename = document.getElementById('lrcInput-filename');
+        const title = document.getElementById('title');
+        const artist = document.getElementById('artist');
+        const album = document.getElementById('album');
+        const year = document.getElementById('year');
+        const lyrics = document.getElementById('lyrics');
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            fileInputFilename.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = () => {
+                mp3ArrayBuffer = reader.result;
+                jsmediatags.read(file, {
+                    onSuccess: tag => {
+                        const t = tag.tags;
+                        title.value = t.title || '';
+                        artist.value = t.artist || '';
+                        album.value = t.album || '';
+                        year.value = t.year || '';
+                        lyrics.value = (t.lyrics ? (t.lyrics.lyrics || t.lyrics) : '');
+                        if (t.picture) {
+                            const picture = t.picture;
+                            let base64String = "";
+                            for (let i = 0; i < picture.data.length; i++) {
+                                base64String += String.fromCharCode(picture.data[i]);
+                            }
+                            coverMime = picture.format;
+                            const blob = new Blob([new Uint8Array(picture.data)], { type: picture.format });
+                            const coverReader = new FileReader();
+                            coverReader.onload = () => {
+                                coverArrayBuffer = coverReader.result;
+                                coverPreview.src = "data:" + picture.format + ";base64," + btoa(base64String);
+                                coverPreview.style.display = 'block';
+                                coverInputFilename.textContent = '已提取原始封面';
+                            };
+                            coverReader.readAsArrayBuffer(blob);
+                        } else {
+                            coverPreview.style.display = 'none';
+                            coverArrayBuffer = null;
+                            coverMime = null;
+                            coverInputFilename.textContent = '无封面';
+                        }
+                    },
+                    onError: err => { console.warn('ID3 Error', err); }
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        lrcInput.addEventListener('change', () => {
+            const file = lrcInput.files[0];
+            if (!file) return;
+            lrcInputFilename.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = () => {
+                lyrics.value = reader.result;
+            };
+            reader.readAsText(file);
+        });
+
+        coverInput.addEventListener('change', () => {
+            const file = coverInput.files[0];
+            if (!file) {
+                coverPreview.style.display = 'none';
+                return;
+            }
+            coverMime = file.type;
+            coverInputFilename.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = () => {
+                coverArrayBuffer = reader.result;
+                coverPreview.src = URL.createObjectURL(file);
+                coverPreview.style.display = 'block';
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById('saveBtn').onclick = () => {
+            if (!mp3ArrayBuffer) {
+                alert('请先导入 MP3 文件');
+                return;
+            }
+            const writer = new ID3Writer(mp3ArrayBuffer);
+            writer
+                .setFrame('TIT2', title.value)
+                .setFrame('TPE1', [artist.value])
+                .setFrame('TALB', album.value)
+                .setFrame('TYER', year.value);
+
+            if (lyrics.value) {
+                writer.setFrame('USLT', {
+                    description: '',
+                    lyrics: lyrics.value,
+                    language: 'chi'
+                });
+            }
+
+            if (coverArrayBuffer && coverMime) {
+                if (coverMime !== 'image/jpeg' && coverMime !== 'image/png') {
+                    alert('仅支持 JPG/PNG 封面');
+                    return;
+                }
+                writer.setFrame('APIC', {
+                    type: 3,
+                    data: coverArrayBuffer,
+                    description: 'Cover',
+                    mimeType: coverMime
+                });
+            }
+
+            writer.addTag();
+            const blob = new Blob([writer.arrayBuffer], { type: 'audio/mpeg' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (title.value || 'output') + '.mp3';
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+    </script>
+</body>
+</html>

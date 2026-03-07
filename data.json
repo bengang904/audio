@@ -1,0 +1,19 @@
+[ {
+        "title": "音乐播放器",
+        "type": "播放器",
+        "link": "web/1/?url=mp3/I%27m%20Black%20Rain%202.mp3",
+        "thumbnail": "web/1/logo.jpg"
+    },
+    {
+        "title": "MP3 ID3 编辑器",
+        "type": "编辑",
+        "link": "web/2",
+        "thumbnail": "web/2/logo.jpg"
+    }
+]
+
+
+
+
+
+
