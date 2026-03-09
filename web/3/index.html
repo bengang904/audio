@@ -155,7 +155,7 @@
         </div>
     </div>
     <audio id="audioPlayer" controls></audio>
-    <div class="status" id="statusMsg">WAV 是高保真的音频容器</div>
+    <div class="status" id="statusMsg">WAV 音频文件：前 44 字节是文件头，后面是原始采样数据。容错性极高，若修改了数据位，只是改变了声音的波形，文件结构依然合法，加密后播放出来是“噪音”，解密后还原。MP3 音频文件：数据结构极其复杂，由无数个帧组成，每个帧都有自己的头信息。若修改了帧头或压缩数据，解码器将无法识别，直接判定文件损坏。因此，你需要准备一个 WAV 格式的音频文件，也可以在 https://ffmpeg.2024-10-24.zip 进行在线格式转换。</div>
 </div>
 <script>
     const audioInput = document.getElementById('audioInput');
@@ -247,4 +247,3 @@
 </script>
 </body>
 </html>
-
