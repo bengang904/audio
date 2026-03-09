@@ -9,6 +9,12 @@
         "type": "编辑",
         "link": "web/2",
         "thumbnail": "web/2/logo.jpg"
+    },
+    {
+        "title": "音频加密",
+        "type": "加密",
+        "link": "web/3",
+        "thumbnail": "web/3/logo.png"
     }
 ]
 
